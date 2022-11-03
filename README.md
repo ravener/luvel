@@ -21,6 +21,7 @@ print(db:get("key"))
 
 db:close()
 ```
+See also the full [documentation](https://ravener.github.io/luvel)
 
 ## TODO
 The library is usable, although I'm still cleaning it up and is bound to change.
