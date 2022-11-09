@@ -8,7 +8,7 @@
 --
 --[[lit-meta
   name = "ravener/luvel"
-  version = "0.0.2"
+  version = "0.0.3"
   dependencies = {}
   description = "A LevelDB wrapper for LuaJIT and Luvit"
   tags = { "leveldb", "database", "ffi" }
@@ -19,13 +19,14 @@
 local ffi = require("ffi")
 local leveldb = ffi.load("leveldb")
 
-local DB = {}
+local iterators = {}
+local DB, DB_ct = {}
 DB.__index = DB
 
-local Iterator = {}
+local Iterator, Iterator_ct = {}
 Iterator.__index = Iterator
 
-local WriteBatch = {}
+local WriteBatch, WriteBatch_ct = {}
 WriteBatch.__index = WriteBatch
 
 -- Ref https://github.com/google/leveldb/blob/master/include/leveldb/c.h
@@ -124,7 +125,7 @@ local function create_options_with(options, fn)
   end
 
   if options.paranoidChecks ~= nil then
-    leveldb.leveldb_options_set_paranoid_checks(c_options, options.paranoid_checks)
+    leveldb.leveldb_options_set_paranoid_checks(c_options, options.paranoidChecks)
   end
 
   local r = fn(c_options, c_err)
@@ -162,13 +163,11 @@ end
 
 
 local function open(dirname, options)
-  local db = setmetatable({}, DB)
-
-  create_options_with(options, function(c_options, c_err)
-    db._db = leveldb.leveldb_open(c_options, dirname, c_err)
+  return create_options_with(options, function(c_options, c_err)
+    local db = DB_ct(leveldb.leveldb_open(c_options, dirname, c_err), false)
+    iterators[db] = setmetatable({}, { __mode = "k" })
+    return db
   end)
-
-  return db
 end
 
 local function version()
@@ -184,10 +183,10 @@ end
 function DB:batchPut(data, options) T_open(self)
   if type(data) ~= "table" then error("data is not a table.") end
 
-  local batch = WriteBatch.new(self._db)
+  local batch = self:batch()
   for key, val in pairs(data) do batch:put(key, val) end
   batch:write(options)
-  batch:destroy()
+  batch:close()
 end
 
 function DB:get(key, options) T_open(self)
@@ -215,35 +214,52 @@ end
 function DB:batchDel(data, options) T_open(self)
   if type(data) ~= "table" then error("data is not table.") end
 
-  local batch = WriteBatch.new(self._db)
+  local batch = self:batch()
   for _, key in ipairs(data) do batch:del(key) end
   batch:write(options)
-  batch:destroy()
+  batch:close()
 end
 
+-- TODO: Probably remove this.
 function DB:newIteratorWith(options, fn) T_open(self)
-  local iter = Iterator.new(self._db, options)
+  local iter = self:iterator(options)
   fn(iter)
-  iter:destroy()
+  iter:close()
+end
+
+function DB:iterator(options) T_open(self)
+  local iterator = create_read_options_with(options, function (c_options)
+    local iterator = leveldb.leveldb_create_iterator(self._db, c_options)
+    return Iterator_ct(db, iterator, false)
+  end)
+
+  iterators[self][iterator] = true
+  return iterator
 end
 
 -- fn(options, function(k, v, iter))
+-- TODO: Probably remove this.
 function DB:each(options, fn) T_open(self)
-  local iter = Iterator.new(self._db, options)
+  local iter = self:iterator(options)
   iter:first()
   local tmp
   for k, v in iter.next, iter do
     tmp = fn(k, v, iter)
     if tmp == false then break end
   end
-  iter:destroy()
+  iter:close()
 end
 
 function DB:batch() T_open(self)
-  return WriteBatch.new(self._db)
+  return WriteBatch_ct(self._db, leveldb.leveldb_writebatch_create(), false)
 end
 
 function DB:close() T_open(self)
+  -- Close open iterators
+  for k in pairs(iterators[self]) do
+    if not k._closed then k:close() end
+  end
+
   leveldb.leveldb_close(self._db)
   self._closed = true
 end
@@ -251,6 +267,14 @@ end
 function DB:__gc()
   if not self._closed then self:close() end
 end
+
+function DB:__pairs() T_open(self)
+  local iter = self:iterator()
+  iter:first()
+  return iter.next, iter, nil
+end
+
+DB_ct = ffi.metatype("struct { leveldb_t* _db; bool _closed; }", DB)
 
 local function destroy(dirname)
   create_options_with({}, function (c_options, c_err)
@@ -268,109 +292,103 @@ end
 --
 -- Iterator operations --
 --
-
-function Iterator.new(db, options)
-  local iter = setmetatable({}, Iterator)
-
-  iter.db = db
-  create_read_options_with(options, function(c_options)
-    iter.iterator = leveldb.leveldb_create_iterator(iter.db, c_options)
-  end)
-
-  return iter
-end
-
 function Iterator:first() T_open(self)
-  leveldb.leveldb_iter_seek_to_first(self.iterator)
+  leveldb.leveldb_iter_seek_to_first(self._iterator)
 end
 
 function Iterator:last() T_open(self)
-  leveldb.leveldb_iter_seek_to_last(self.iterator)
+  leveldb.leveldb_iter_seek_to_last(self._iterator)
 end
 
 function Iterator:seek(key) T_open(self)
-  leveldb.leveldb_iter_seek(self.iterator, key, #key)
+  leveldb.leveldb_iter_seek(self._iterator, key, #key)
 end
 
 function Iterator:next() T_open(self)
-  local valid = leveldb.leveldb_iter_valid(self.iterator)
+  local valid = leveldb.leveldb_iter_valid(self._iterator)
   if valid == 0 then return nil end
 
   local key, value = self:read()
-  leveldb.leveldb_iter_next(self.iterator)
+  leveldb.leveldb_iter_next(self._iterator)
 
   return key, value
 end
 
+function Iterator:valid() T_open(self)
+  return leveldb.leveldb_iter_valid(self._iterator) ~= 0
+end
+
 function Iterator:prev() T_open(self)
-  local valid = leveldb.leveldb_iter_valid(self.iterator)
+  local valid = leveldb.leveldb_iter_valid(self._iterator)
   if valid == 0 then return nil end
 
   local key, value = self:read()
-  leveldb.leveldb_iter_prev(self.iterator)
+  leveldb.leveldb_iter_prev(self._iterator)
 
   return key, value
 end
 
 function Iterator:read() T_open(self)
-  local valid = leveldb.leveldb_iter_valid(self.iterator)
+  local valid = leveldb.leveldb_iter_valid(self._iterator)
   if valid == 0 then return nil end
 
   local c_key_size = ffi.new("size_t[1]")
-  local c_key = leveldb.leveldb_iter_key(self.iterator, c_key_size)
+  local c_key = leveldb.leveldb_iter_key(self._iterator, c_key_size)
   local key = ffi.string(c_key, c_key_size[0])
 
   local c_value_size = ffi.new("size_t[1]")
-  local c_value = leveldb.leveldb_iter_value(self.iterator, c_value_size)
+  local c_value = leveldb.leveldb_iter_value(self._iterator, c_value_size)
   local value = ffi.string(c_value, c_value_size[0])
 
   return key, value
 end
 
-function Iterator:destroy() T_open(self)
-  leveldb.leveldb_iter_destroy(self.iterator)
+function Iterator:close() T_open(self)
+  leveldb.leveldb_iter_destroy(self._iterator)
   self._closed = true
 end
 
 function Iterator:__gc()
-  if not self._closed then self:destroy() end
+  if not self._closed then self:close() end
 end
+
+Iterator_ct = ffi.metatype([[struct {
+  leveldb_t*          _db;
+  leveldb_iterator_t* _iterator;
+  bool                _closed;
+}]], Iterator)
 
 --
 -- Batch operations --
 --
-
-function WriteBatch.new(db)
-  local batch = setmetatable({}, WriteBatch)
-
-  batch.db = db
-  batch.c_batch = leveldb.leveldb_writebatch_create()
-
-  return batch
-end
-
 function WriteBatch:put(key, val) T_open(self)
-  leveldb.leveldb_writebatch_put(self.c_batch, key, #key, val, #val)
+  leveldb.leveldb_writebatch_put(self._batch, key, #key, val, #val)
 end
 
 function WriteBatch:del(key) T_open(self)
-  leveldb.leveldb_writebatch_delete(self.c_batch, key, #key)
+  leveldb.leveldb_writebatch_delete(self._batch, key, #key)
 end
 
 function WriteBatch:write(sync) T_open(self)
   create_write_options_with(sync, function(c_options, c_err)
-    leveldb.leveldb_write(self.db, c_options, self.c_batch, c_err)
+    leveldb.leveldb_write(self._db, c_options, self._batch, c_err)
   end)
 end
 
-function WriteBatch:destroy() T_open(self)
-  leveldb.leveldb_writebatch_destroy(self.c_batch)
+function WriteBatch:close() T_open(self)
+  leveldb.leveldb_writebatch_destroy(self._batch)
   self._closed = true
 end
 
 function WriteBatch:__gc()
-  if not self._closed then self:destroy() end
+  if not self._closed then self:close() end
 end
+
+WriteBatch_ct = ffi.metatype([[struct {
+  leveldb_t* _db;
+  leveldb_writebatch_t* _batch;
+  bool _closed;
+}]], WriteBatch)
 
 return {
   open = open,

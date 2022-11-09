@@ -11,7 +11,8 @@ print("")
 
 function print_db_data()
   print("Iterator all keys")
-  db:each(nil, function(k, v) print(k, v) end)
+
+  for k, v in pairs(db) do print(k, v) end
   print("")
 end
 
@@ -51,3 +52,6 @@ print("destroy")
 luvel.destroy("./tmp")
 
 print("end")
+
+-- Force GC to stress test that everything cleans up properly.
+collectgarbage()

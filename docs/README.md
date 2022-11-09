@@ -16,7 +16,14 @@ local luvel = require("luvel")
 local db = luvel.open("database", { createIfMissing = true })
 
 db:put("key", "value")
+db:put("another", "data")
+
 print(db:get("key"))
+
+for k, v in pairs(db) do
+  print(k, v)
+end
+
 db:close()
 ```
 Read on for more examples and the complete API documentation.
@@ -33,13 +40,15 @@ Read on for more examples and the complete API documentation.
   * [DB:put(key, val, sync?)](#dbputkey-val-sync)
   * [DB:del(key, sync?)](#dbdelkey-sync)
   * [DB:batch()](#dbbatch)
+  * [DB:iterator(options?)](#dbiteratoroptions)
+  * [DB:__pairs()](#db__pairs)
   * [DB:close()](#dbclose)
   * [DB:__gc()](#db__gc)
 * [WriteBatch](#writebatch)
   * [WriteBatch:put(key, val)](#writebatchputkey-val)
   * [WriteBatch:del(key)](#writebatchdelkey)
   * [WriteBatch:write(sync?)](#writebatchwritesync)
-  * [WriteBatch:destroy()](#writebatchdestroy)
+  * [WriteBatch:close()](#writebatchclose)
   * [WriteBatch:__gc()](#writebatch__gc)
 * [Iterator](#iterator)
   * [Iterator:first()](#iteratorfirst)
@@ -48,7 +57,7 @@ Read on for more examples and the complete API documentation.
   * [Iterator:prev()](#iteratorprev)
   * [Iterator:next()](#iteratornext)
   * [Iterator:read()](#iteratorread)
-  * [Iterator:destroy()](#iteratordestroy)
+  * [Iterator:close()](#iteratorclose)
   * [Iterator:__gc()](#iterator__gc)
 
 <!-- vim-markdown-toc -->
@@ -165,6 +174,23 @@ batch:put("another", "hello")
 batch:write()
 ```
 
+### DB:iterator(options?)
+Creates an [Iterator](#iterator) for iterating through the database.
+
+- **options** (`table`) - Read options.
+
+**Returns:** [Iterator](#iterator)
+
+### DB:__pairs()
+Metamethod that allows for easy iteration over the database. You may use [DB:iterator()](#dbiteratoroptions) for more flexibility.
+
+**Example**
+```lua
+for k, v in pairs(db) do
+  print(k, v)
+end
+```
+
 ### DB:close()
 Closes the database. The DB object must not be used after this call.
 
@@ -222,12 +248,12 @@ batch:del("name")
 batch:write()
 ```
 
-### WriteBatch:destroy()
-Destroys the batch, freeing the underlying C memory. The batch must not be used after this call.
+### WriteBatch:close()
+Closes the batch, freeing the underlying C memory. The batch must not be used after this call.
 
 **Example**
 ```lua
-batch:destroy()
+batch:close()
 ```
 
 ### WriteBatch:__gc()
@@ -235,7 +261,7 @@ This metamethod ensures the batch is destroyed and the underlying C memory is fr
 
 This is just to document the behavior, you must not call this function.
 
-You may use [WriteBatch:destroy()](#batchdestroy) if you want to destroy it before a garbage collection.
+You may use [WriteBatch:close()](#writebatchclose) if you want to destroy it before a garbage collection.
 
 ## Iterator
 
@@ -251,12 +277,12 @@ You may use [WriteBatch:destroy()](#batchdestroy) if you want to destroy it befo
 
 ### Iterator:read()
 
-### Iterator:destroy()
-Destroys the iterator, freeing the underlying C memory. The iterator must not be used after this call.
+### Iterator:close()
+Closes the iterator, freeing the underlying C memory. The iterator must not be used after this call.
 
 **Example**
 ```lua
-iter:destroy()
+iter:close()
 ```
 
 ### Iterator:__gc()
@@ -264,4 +290,4 @@ This metamethod ensures the iterator is destroyed and the underlying C memory is
 
 This is just to document the behavior, you must not call this function.
 
-You may use [Iterator:destroy()](#iteratordestroy) if you want to destroy it before a garbage collection.
+You may use [Iterator:close()](#iteratorclose) if you want to destroy it before a garbage collection.
