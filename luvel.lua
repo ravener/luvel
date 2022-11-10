@@ -8,7 +8,7 @@
 --
 --[[lit-meta
   name = "ravener/luvel"
-  version = "0.0.3"
+  version = "0.0.4"
   dependencies = {}
   description = "A LevelDB wrapper for LuaJIT and Luvit"
   tags = { "leveldb", "database", "ffi" }
@@ -220,13 +220,6 @@ function DB:batchDel(data, options) T_open(self)
   batch:close()
 end
 
--- TODO: Probably remove this.
-function DB:newIteratorWith(options, fn) T_open(self)
-  local iter = self:iterator(options)
-  fn(iter)
-  iter:close()
-end
-
 function DB:iterator(options) T_open(self)
   local iterator = create_read_options_with(options, function (c_options)
     local iterator = leveldb.leveldb_create_iterator(self._db, c_options)
@@ -235,19 +228,6 @@ function DB:iterator(options) T_open(self)
 
   iterators[self][iterator] = true
   return iterator
-end
-
--- fn(options, function(k, v, iter))
--- TODO: Probably remove this.
-function DB:each(options, fn) T_open(self)
-  local iter = self:iterator(options)
-  iter:first()
-  local tmp
-  for k, v in iter.next, iter do
-    tmp = fn(k, v, iter)
-    if tmp == false then break end
-  end
-  iter:close()
 end
 
 function DB:batch() T_open(self)
