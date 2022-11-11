@@ -70,6 +70,7 @@ Opens a database in the given directory.
   - **createIfMissing** (`boolean`) - Create the database if missing instead of raising an error.
   - **errorIfExists** (`boolean`) - Raise an error if an existing database exists.
   - **compression** (`boolean`) - Whether to enable snappy compression. Enabled by default.
+  - **paranoidChecks** (`boolean`) - Whether to enable paranoid checks. Disabled by default.
 
 **Returns:** A [DB](#db) object representing the database.
 
@@ -266,16 +267,29 @@ You may use [WriteBatch:close()](#writebatchclose) if you want to destroy it bef
 ## Iterator
 
 ### Iterator:first()
+Sets iterator position to the first entry in the database.
 
 ### Iterator:last()
+Sets iterator position to the last entry in the database.
 
 ### Iterator:seek(key)
+Sets iterator position to the first key in the database that is on or past argument.
+
+- **key** (`key`) - The key to search for.
 
 ### Iterator:prev()
+Sets iterator position to the previous entry in the database.
 
 ### Iterator:next()
+Sets iterator position to the next entry in the database.
 
 ### Iterator:read()
+Read key and value from iterator position. Returns nil if entry not exists.
+
+**Returns:**
+- `key` (`string`) - The key of the entry.
+- `value` (`string`) - The value of the entry.
+- or nil if entry not exists.
 
 ### Iterator:close()
 Closes the iterator, freeing the underlying C memory. The iterator must not be used after this call.
