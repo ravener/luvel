@@ -278,10 +278,20 @@ Sets iterator position to the first key in the database that is on or past argum
 - **key** (`key`) - The key to search for.
 
 ### Iterator:prev()
-Sets iterator position to the previous entry in the database.
+Sets iterator position to the previous entry in the database. Returns entry from current iterator position.
+
+**Returns:**
+- `key` (`string`) - The key of the entry.
+- `value` (`string`) - The value of the entry.
+- or nil if entry not exists.
 
 ### Iterator:next()
-Sets iterator position to the next entry in the database.
+Sets iterator position to the next entry in the database. Returns entry from current iterator position.
+
+**Returns:**
+- `key` (`string`) - The key of the entry.
+- `value` (`string`) - The value of the entry.
+- or nil if entry not exists.
 
 ### Iterator:read()
 Read key and value from iterator position. Returns nil if entry not exists.
