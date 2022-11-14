@@ -97,6 +97,7 @@ ffi.cdef[[
   void leveldb_readoptions_destroy(leveldb_readoptions_t*);
 
   leveldb_writeoptions_t* leveldb_writeoptions_create();
+  void leveldb_writeoptions_set_sync(leveldb_writeoptions_t*, uint8_t);
   void leveldb_writeoptions_destroy(leveldb_writeoptions_t*);
 ]]
 
