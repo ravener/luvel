@@ -8,7 +8,7 @@
 --
 --[[lit-meta
   name = "ravener/luvel"
-  version = "0.0.4"
+  version = "0.0.5"
   dependencies = {}
   description = "A LevelDB wrapper for LuaJIT and Luvit"
   tags = { "leveldb", "database", "ffi" }
