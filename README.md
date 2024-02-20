@@ -7,11 +7,13 @@ luvel only runs on LuaJIT and Luvit.
 If you are using LuaJIT just copy the `luvel.lua` file into your project.
 
 If you are using luvit then you may install the lit package:
+
 ```sh
 $ lit install ravener/luvel
 ```
 
 ## Usage
+
 ```lua
 local luvel = require("luvel")
 local db = luvel.open("database", { createIfMissing = true })
@@ -31,6 +33,7 @@ end
 -- Close the database.
 db:close()
 ```
+
 See also the full [documentation](https://ravener.github.io/luvel)
 
 ## TODO

@@ -2,7 +2,7 @@
 -- A LevelDB wrapper for LuaJIT and Luvit
 -- MIT License
 -- Copyright(c) 2022 Xiejiangzhi
--- Copyright(c) 2022 Ravener
+-- Copyright(c) 2022-2024 Ravener
 -- Original library: https://github.com/Codezerker/lua_leveldb
 ---------------------------------------------------------------------------
 --

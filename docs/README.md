@@ -1,16 +1,21 @@
 Luvel is available on [Lit](https://luvit.io)
+
 ```sh
 $ lit install ravener/luvel
 ```
+
 If you are using pure LuaJIT or don't want to use lit, you may just copy the [luvel.lua](https://github.com/ravener/luvel/blob/main/luvel.lua) file into your project.
 
 You will also need leveldb installed on your system where `ffi.load` can find it, if you are on Ubuntu you can just do:
+
 ```sh
 $ sudo apt-get install libleveldb-dev
 ```
+
 Similar packages may exist on other systems and you may also [build leveldb from source](https://github.com/google/leveldb#building)
 
 Here's an example to get you quickly started:
+
 ```lua
 local luvel = require("luvel")
 local db = luvel.open("database", { createIfMissing = true })
@@ -26,6 +31,7 @@ end
 
 db:close()
 ```
+
 Read on for more examples and the complete API documentation.
 
 # API
@@ -75,6 +81,7 @@ Opens a database in the given directory.
 **Returns:** A [DB](#db) object representing the database.
 
 **Example**
+
 ```lua
 local luvel = require("luvel")
 
@@ -91,6 +98,7 @@ Try to repair the database in the given directory, recovering as much data as po
 - **dirname** (`string`) - The directory for the leveldb database.
 
 **Example**
+
 ```lua
 local luvel = require("luvel")
 luvel.repair("./my-database")
@@ -102,6 +110,7 @@ Destroys the database in the given directory, deleting everything.
 - **dirname** (`string`) - The directory for the leveldb database.
 
 **Example**
+
 ```lua
 local luvel = require("luvel")
 luvel.destroy("./my-database")
@@ -115,6 +124,7 @@ Returns the LevelDB version.
 - `minor` (`number`) - The minor version.
 
 **Example**
+
 ```lua
 local luvel = require("luvel")
 local major, minor = luvel.version()
@@ -134,6 +144,7 @@ Gets a value from the database by the given key, returns nil if not found.
 **Returns:** string, or nil if the key was not found.
 
 **Example**
+
 ```lua
 print(db:get("name"))
 ```
@@ -146,6 +157,7 @@ Puts a key in the database.
 - **sync** (`boolean`) - Whether to perform a synchronous write. Default is to perform an Asynchronous write.
 
 **Example**
+
 ```lua
 db:put("key", "value")
 db:put("name", "John")
@@ -158,6 +170,7 @@ Deletes a key from the database.
 - **sync** (`boolean`) - Whether to perform a synchronous write. Default is to perform an Asynchronous write.
 
 **Example**
+
 ```lua
 db:del("key")
 ```
@@ -166,6 +179,7 @@ db:del("key")
 Creates a [WriteBatch](#writebatch)
 
 **Example**
+
 ```lua
 local batch = db:batch()
 
@@ -186,6 +200,7 @@ Creates an [Iterator](#iterator) for iterating through the database.
 Metamethod that allows for easy iteration over the database. You may use [DB:iterator()](#dbiteratoroptions) for more flexibility.
 
 **Example**
+
 ```lua
 for k, v in pairs(db) do
   print(k, v)
@@ -196,6 +211,7 @@ end
 Closes the database. The DB object must not be used after this call.
 
 **Example**
+
 ```lua
 db:close()
 ```
@@ -219,6 +235,7 @@ Put a key-value pair onto this batch.
 - **val** (`string`) - The value.
 
 **Example**
+
 ```lua
 batch:put("name", "John")
 batch:put("key", "value")
@@ -230,6 +247,7 @@ Queue a delete onto this batch.
 - **key** (`string`) - The key.
 
 **Example**
+
 ```lua
 batch:del("key")
 batch:del("name")
@@ -241,6 +259,7 @@ Executes this batch, applying all the added operations onto the database.
 - **sync** (`boolean`) - Whether to perform a synchronous write. Default is to perform an Asynchronous write.
 
 **Example**
+
 ```lua
 batch:put("key", "value")
 batch:del("name")
@@ -253,6 +272,7 @@ batch:write()
 Closes the batch, freeing the underlying C memory. The batch must not be used after this call.
 
 **Example**
+
 ```lua
 batch:close()
 ```
@@ -305,6 +325,7 @@ Read key and value from iterator position. Returns nil if entry not exists.
 Closes the iterator, freeing the underlying C memory. The iterator must not be used after this call.
 
 **Example**
+
 ```lua
 iter:close()
 ```
